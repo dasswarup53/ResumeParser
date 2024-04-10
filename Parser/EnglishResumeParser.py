@@ -151,7 +151,7 @@ class EnglishResume(BaseResumeInterface):
         temp_dct['personal'] = {}
         temp_dct['work_exp'] = []
 
-        doc=self.custom_nlp(self.resume_text,disable=['parser',"tagger"])
+        doc=self.custom_nlp(self.resume_text,disable=['parser',"tagger","textcat"])
 
         for ent in doc.ents:
             if ent.label_ == 'DEGREE':

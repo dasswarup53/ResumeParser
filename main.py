@@ -72,13 +72,12 @@ def upload_cv(file: UploadFile):
     logger.info(f"Detected language code {lang} with confidence {prob}")
     # text=remove_non_alphanumeric_lines(text)
     # print(text)
-    # start = timer()
+    start = timer()
     if lang=='en':
         logger.info(f"Parsing the resume....")
         resume_obj=EnglishResume(nlp, custom_nlp, skill_list, text)
         data=resume_obj.parse()
-        # end = timer()
-        # print(timedelta(seconds=end - start))
+
         parser_record=Parser_Record(remark='success',status="succ",resume_pk=22,candidate_pk=22,language_code='en',language_confidence=prob)
         session.add(parser_record)
         session.commit()
@@ -89,6 +88,8 @@ def upload_cv(file: UploadFile):
             'language-code':parser_record.language_code,
             'language-confidence':parser_record.language_confidence
         }
+        end = timer()
+        logger.info(f"parsed resume in  {timedelta(seconds=end - start)} seconds")
         session.close()
         return data
     else:

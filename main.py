@@ -67,7 +67,7 @@ def upload_cv(file: UploadFile):
     doc = fitz.open(file.filename)  # open a document
     for page in doc:  # iterate the document pages
         text += page.get_text()  # get plain text encoded as UTF-8
-
+    print(text)
     lang,prob=detect_language_with_langdetect(text[:100])
     logger.info(f"Detected language code {lang} with confidence {prob}")
     # text=remove_non_alphanumeric_lines(text)

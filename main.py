@@ -65,7 +65,7 @@ def process_llm_response(llm_response):
 
 documents = load_docs('cv-directory')
 
-key = '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'
+key = ''
 
 # docs = split_docs(documents)
 # print(len(docs))

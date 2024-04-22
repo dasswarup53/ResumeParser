@@ -42,7 +42,7 @@ def process_llm_response(llm_response):
 
 def parse_return(txt):
 
-    key='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'
+    key=''
 
     # docs = split_docs(documents)
     # print(len(docs))

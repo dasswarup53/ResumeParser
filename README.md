@@ -107,4 +107,43 @@ E    #       LOSS TRANS...  LOSS NER  ENTS_F  ENTS_P  ENTS_R  SCORE
     2. Resume Parser (e.g. Python)
 
 ### Gen Ai Solution:
-#### Using ChatGPT, Lang Chain & RAG I am developing a solution, would upload it before our discussion
+#### Using ChatGPT, Lang Chain & RAG I have also developed a solution whose output looks like this
+```json
+{'Education': ['MSc Data Science (Year 2021), Liverpool John Moores '
+               'University, Grade : Distinction',
+               'Bachelor of Engineering Computer (Year 2018), Pune University, '
+               'Grade : Distinction'],
+ 'Skills': ['Machine Learning',
+            'MLOps',
+            'Data Engineering',
+            'ML Algorithms',
+            'Libraries',
+            'Big Data/DataBases',
+            'Cloud',
+            'Languages'],
+ 'Work experience': [{'company name': 'OneCard by FPL Technologies, Pune, '
+                                      'India',
+                      'designation': 'Lead Machine Learning Engineer',
+                      'end-date': 'Present',
+                      'start-date': 'March 2020',
+                      'summary': 'Built amazing products like OneScore (20 '
+                                 'Million + Users) & OneCard (~ 2 Million '
+                                 'Users). Led the team of engineers to create '
+                                 'Data Lake, ML Workbenches & Analytics '
+                                 'Platform.'},
+                     {'company name': 'Rule 14 LLC, Pune, India',
+                      'designation': 'Data Scientist',
+                      'end-date': 'Feb 2020',
+                      'start-date': 'Jan 2019',
+                      'summary': 'First hire of the data science team and was '
+                                 'also responsible for team building and '
+                                 'heading initial client projects'},
+                     {'company name': 'Searce LLC, Pune, India',
+                      'designation': 'Software Engineer Trainee',
+                      'end-date': 'Dec 2018',
+                      'start-date': 'July 2018',
+                      'summary': 'Worked on Image captioning (using VGG16), '
+                                 'Model Blending and learnt best practices '
+                                 'like CI/CD, Canary Deployment, Test Driven '
+                                 'Development etc'}]}
+```

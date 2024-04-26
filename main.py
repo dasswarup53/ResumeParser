@@ -1,76 +1,35 @@
-from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import JSONResponse
-from fastapi import FastAPI, Request
+from fastapi import Request
 from timeit import default_timer as timer
 from datetime import timedelta
-import fitz
 import os
 import spacy
-import spacy_transformers
 import pandas as pd
 import warnings
 from db import engine
-import models as models
-from models import  Parser_Record
-import logging
-import re
+from Models import models as models
+from Models.models import  Parser_Record
 from sqlalchemy.orm import sessionmaker
 import uvicorn
-from typing import List,Optional
-from fastapi.encoders import jsonable_encoder
-import io
-from fastapi import FastAPI, UploadFile, File
-from pdfminer.converter import TextConverter
-from pdfminer.pdfinterp import PDFPageInterpreter
-from pdfminer.pdfinterp import PDFResourceManager
-from pdfminer.layout import LAParams
-from pdfminer.pdfpage import PDFPage
-from pdfminer.pdfparser import PDFSyntaxError
-import logging
-import traceback
+from fastapi import FastAPI, UploadFile
+
 from Parser.EnglishResumeParser import EnglishResume
 from logging.config import dictConfig
 import logging
-from log_config import log_config
-from langdetect import detect_langs
-from Parser.GenAiEnglishParser import parse_return
-from langchain.document_loaders import DirectoryLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from utils.log_config import log_config
+from Parser.GenAiEnglishParser import llm_parse_return
+
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
 from langchain.chat_models import ChatOpenAI
-from langchain.chains import ConversationChain
-from langchain.memory import ConversationBufferWindowMemory
 from langchain.chains import RetrievalQA
-from langchain.prompts import ChatPromptTemplate
-
+from utils.service_helper import *
 #####
-#adding RAG
-def load_docs(directory):
-  loader = DirectoryLoader(directory,show_progress=True) #unstructuredloader by default has used this auto identify file type and load it, mode="single", strategy='fast'(other option is strategy='hi_res' that use yolo varient if mode is elements)
-  documents = loader.load()
-  return documents
-
-def split_docs(documents, chunk_size=3000, chunk_overlap=100):
-  text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-  docs = text_splitter.split_documents(documents)
-  return docs
-
-## Cite sources
-def process_llm_response(llm_response):
-    print(llm_response['result'])
-    print('\n\nSources:')
-    for source in llm_response["source_documents"]:
-        print(source.metadata['source'])
+# RAG init
 
 documents = load_docs('cv-directory')
 
-key = ''
-
-# docs = split_docs(documents)
+docs = split_docs(documents)
 # print(len(docs))
-
-os.environ["OPENAI_API_KEY"] = key
 
 embeddings = OpenAIEmbeddings(openai_api_key=key)
 
@@ -78,12 +37,12 @@ persist_directory = 'db'
 
 embedding = OpenAIEmbeddings()
 
-# vectordb = Chroma.from_documents(documents=docs,
-#                                  embedding=embedding,
-#                                  persist_directory=persist_directory)
+vectordb = Chroma.from_documents(documents=docs,
+                                 embedding=embedding,
+                                 persist_directory=persist_directory)
 
-# vectordb.persist()
-# vectordb = None
+vectordb.persist()
+vectordb = None
 
 # Now we can load the persisted database from disk, and use it as normal.
 vectordb = Chroma(persist_directory=persist_directory,
@@ -123,29 +82,11 @@ custom_nlp = spacy.load('model-best-v2', disable=["parser"])
 logger = logging.getLogger("uvicorn.error")
 
 
-
-
-def detect_language_with_langdetect(line):
-
-    try:
-        langs = detect_langs(line)
-        for item in langs:
-            # The first one returned is usually the one that has the highest probability
-            return item.lang, item.prob
-    except: return "err", 0.0
-
 #post api to
 @app.post("/upload-cv")
 def upload_cv(file: UploadFile):
-    contents = file.file.read()
-    with open(file.filename, 'wb') as f:
-        f.write(contents)
     logger.info(f"processing the resume {file.filename}")
-    text=""
-    doc = fitz.open(file.filename)  # open a document
-    for page in doc:  # iterate the document pages
-        text += page.get_text()  # get plain text encoded as UTF-8
-    print(text)
+    text=pdf_2_txt(file)
     lang,prob=detect_language_with_langdetect(text[:100])
     logger.info(f"Detected language code {lang} with confidence {prob}")
     # text=remove_non_alphanumeric_lines(text)
@@ -156,18 +97,20 @@ def upload_cv(file: UploadFile):
         resume_obj=EnglishResume(nlp, custom_nlp, skill_list, text)
         data=resume_obj.parse()
 
-        parser_record=Parser_Record(remark='success',status="succ",resume_pk=22,candidate_pk=22,language_code='en',language_confidence=prob)
-        session.add(parser_record)
-        session.commit()
         data['metadata']={
-            'job_pk':parser_record.job_pk,
-            'remark':parser_record.remark,
-            'status':parser_record.status,
-            'language-code':parser_record.language_code,
-            'language-confidence':parser_record.language_confidence
+            'job_pk':22,
+            'remark':'success',
+            'status':'200 OK',
+            'language-code':lang,
+            'language-confidence':prob
         }
         end = timer()
         logger.info(f"parsed resume in  {timedelta(seconds=end - start)} seconds")
+
+        parser_record = Parser_Record(remark='success', status="succ", resume_pk=22, candidate_pk=22,
+                                      language_code='en', language_confidence=prob, api_type='STANDARD_PARSER', response=data)
+        session.add(parser_record)
+        session.commit()
         session.close()
         return data
     else:
@@ -176,15 +119,8 @@ def upload_cv(file: UploadFile):
 
 @app.post("/upload-cv-sota")
 def upload_cv(file: UploadFile):
-    contents = file.file.read()
-    with open(file.filename, 'wb') as f:
-        f.write(contents)
     logger.info(f"processing the resume {file.filename}")
-    text=""
-    doc = fitz.open(file.filename)  # open a document
-    for page in doc:  # iterate the document pages
-        text += page.get_text()  # get plain text encoded as UTF-8
-    print(text)
+    text=pdf_2_txt(file)
     lang,prob=detect_language_with_langdetect(text[:100])
     logger.info(f"Detected language code {lang} with confidence {prob}")
     # text=remove_non_alphanumeric_lines(text)
@@ -192,7 +128,7 @@ def upload_cv(file: UploadFile):
     start = timer()
     if lang=='en':
         logger.info(f"Parsing the resume....")
-        data=parse_return(text)
+        data=llm_parse_return(text,key)
 
         end = timer()
         logger.info(f"parsed resume in  {timedelta(seconds=end - start)} seconds")
@@ -205,6 +141,7 @@ def upload_cv(file: UploadFile):
 def query_cv(request: Request):
     params = request.query_params
     print(params.get("question"))
+    print("------------------")
     query=params.get("question")
     llm_response = qa_chain(query)
     process_llm_response(llm_response)
